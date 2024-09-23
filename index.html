@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Задача на координаты</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@300&family=Open+Sans:wght@400&display=swap');
+    body {
+      font-family: 'Open Sans', sans-serif;
+      font-size: 18px;
+    }
+    #taskSection {
+      background-color: #FFFFFF;
+      padding: 20px;
+      border: 1px solid #ccc;
+    }
+    .correct {
+      background-color: #90EE90 !important;
+    }
+    .incorrect {
+      background-color: #FFDDC1 !important;
+    }
+    .default {
+      background-color: #FFFFFF !important;
+    }
+    #historySection {
+      margin-top: 20px;
+    }
+    #historyList {
+      display: flex;
+      flex-wrap: wrap;
+    }
+    .history-item {
+      width: 20px;
+      height: 20px;
+      margin: 2px;
+    }
+    .correct-item {
+      background-color: #008000;
+    }
+    .incorrect-item {
+      background-color: #FFDDC1;
+    }
+    #progressSection {
+      margin-top: 20px;
+    }
+    .star {
+      font-size: 24px;
+      color: #e0e0e0;
+    }
+    .star.filled {
+      color: #ffd700;
+    }
+    #canvasContainer {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+<div id="taskSection" class="default">
+  <p id="taskDescription"></p>
+  <form id="taskForm"></form>
+  <div id="result"></div>
+  <button id="generateButton" onclick="generateNewTask()" disabled>Сгенерировать новую задачу</button>
+</div>
+<div id="canvasContainer">
+  <p>Координатная плоскость</p>
+  <canvas id="canvas" width="520" height="520"></canvas>
+</div>
+<div id="historySection">
+  <p>История попыток</p>
+  <div id="historyList"></div>
+  <p id="progressText">Попробуйте решить верно три раза подряд</p>
+  <div id="progressSection">
+    <span class="star" id="star1">★</span>
+    <span class="star" id="star2">★</span>
+    <span class="star" id="star3">★</span>
+  </div>
+</div>
+<script>
+  function generatePoints() {
+    var choices = [-5, -4, 4, 5];
+    function generate_point_far_from_center() {
+      return { x: choices[Math.floor(Math.random() * choices.length)], y: choices[Math.floor(Math.random() * choices.length)] };
+    }
+    function generate_point_closer_to_center(point) {
+      var dx = Math.floor(Math.random() * 3) + 1;
+      var dy = Math.floor(Math.random() * 3) + 1;
+      return { x: point.x > 0 ? point.x - dx : point.x + dx, y: point.y > 0 ? point.y - dy : point.y + dy };
+    }
+    var point1 = generate_point_far_from_center();
+    var point2 = generate_point_closer_to_center(point1);
+    var point3 = { x: point2.x + (point2.x - point1.x), y: point2.y + (point2.y - point1.y) };
+    var point4 = { x: point1.x, y: point3.y };
+    var points = [point1, point2, point3, point4];
+    points = shuffle(points);
+    var correctIndex = points.findIndex(point => point.x === point4.x && point.y === point4.y);
+    return { points: points, correctIndex: correctIndex };
+  }
+
+  function shuffle(array) {
+    for (var i = array.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+  }
+
+  function checkAnswer(correctIndex, correctX, correctY) {
+    var radios = document.querySelectorAll('input[type="radio"]');
+    var selectedValue;
+    radios.forEach(radio => {
+      if (radio.checked) selectedValue = parseInt(radio.value);
+    });
+    var result = document.getElementById('result');
+    var taskSection = document.getElementById('taskSection');
+    var historyList = document.getElementById('historyList');
+    var isCorrect = selectedValue === correctIndex;
+    result.innerHTML = isCorrect ? 'Решение верно!' : 'Решение неверно. Верный ответ: (' + correctX + ', ' + correctY + ')';
+    taskSection.className = isCorrect ? 'correct' : 'incorrect';
+    historyList.innerHTML += `<div class="history-item ${isCorrect ? 'correct-item' : 'incorrect-item'}"></div>`;
+  }
+
+  function generateNewTask() {
+    var pointsData = generatePoints();
+    var points = pointsData.points;
+    var correctIndex = pointsData.correctIndex;
+    document.getElementById('taskDescription').innerHTML = `Даны четыре точки с координатами: (${points[0].x}, ${points[0].y}), (${points[1].x}, ${points[1].y}), (${points[2].x}, ${points[2].y}), и (${points[3].x}, ${points[3].y}). Три из этих точек лежат на одной прямой. Определите, какая точка не лежит на этой прямой.`;
+    var taskFormHTML = points.map((point, index) => `<input type="radio" name="choice" value="${index}"> (${point.x}, ${point.y})<br>`).join('');
+    taskFormHTML += `<input type="button" value="Submit" onclick="checkAnswer(${correctIndex}, ${points[correctIndex].x}, ${points[correctIndex].y})">`;
+    document.getElementById('taskForm').innerHTML = taskFormHTML;
+    document.getElementById('result').innerHTML = '';
+  }
+
+  function loadHistory() {
+    var history = JSON.parse(localStorage.getItem('history')) || [];
+    history.forEach(item => {
+      document.getElementById('historyList').innerHTML += `<div class="history-item ${item === 'correct' ? 'correct-item' : 'incorrect-item'}"></div>`;
+    });
+  }
+
+  window.onload = function() {
+    loadHistory();
+    generateNewTask();
+  };
+</script>
+</body>
+</html>
